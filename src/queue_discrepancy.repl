@@ -1,0 +1,36 @@
+
+
+;; Failed queue test
+;; Uploading report to 2018/11/27/stage-e2e/pipeline-13990-revision-fe6e71f178289373dfa84f91495fdf129237e6b6
+
+;; Succeeded queue test
+;; Uploading report to 2018/11/28/stage-e2e/pipeline-14020-revision-9be476bd1ed39eb759ffac6875d4ce177579bf3c
+
+
+
+
+
+;; Test Environment
+;; ================
+
+;; Application Name:   lg-api
+;; Environment Name:   lg-api-test
+;; Environment ID:     e-5qpajpvhuc
+
+;; Current logs can be pulled from the test environment directly using the elasticbeanstalk CLI (eb cli). After the logs
+;; have filled a certain amount of space on the environment, or an environment change is applied the existing logs will
+;; be uploaded to S3 and removed from the machine. These “rotated logs” remain in S3 afterwards to be persisted eternally.
+
+;; 1. Pull From Beanstalk (Current Logs)
+
+;; ```cd /platform/api
+;; eb logs --all lg-api-test```
+
+;; 2. Pull From S3 (Rotated Logs)
+
+;; ```aws s3 cp --recursive s3://elasticbeanstalk-us-west-2-125055406909/resources/environments/logs/publish/e-5qpajpvhuc ~/logs```
+
+
+;; to do #1 you have to install the eb cli first
+;; which is different  than the aws cli
+;; https://docs.aws.amazon.com/elasticbeanstalk/latest/dg/eb-cli3.html
