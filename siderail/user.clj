@@ -1,156 +1,127 @@
 (ns user)
 
-(do
+(do "Setup"
 
-  (require '[clojure.spec.alpha :as s]
-           '[clojure.spec.test.alpha :as t]
-           '[clojure.spec.gen.alpha :as g]
-           '[clojure.string :as string]
-           '[clojure.java.io :as io]
-           '[clojure.pprint :refer [print-table pprint]]
-           '[cognitect.transcriptor :refer [check!]])
+    (require '[clojure.spec.alpha :as s]
+             '[clojure.spec.test.alpha :as t]
+             '[clojure.spec.gen.alpha :as g]
+             '[clojure.string :as string]
+             '[clojure.java.io :as io]
+             '[clojure.pprint :refer [print-table pprint]]
+             '[cognitect.transcriptor :refer [check!]])
 
-  (set! *print-length* 10)
+    (set! *print-length* 10)
 
-  (set! *print-level* 4))
+    (set! *print-level* 4)
 
-(do
-  (require '[cyclotron.cache :as cache])
-
-  (cache/init))
-
-
-
-(do
-  (require '[cyclotron.run :as run])
-
-  (def flawless (->> run/runs
-                     (filter #(= 0 (:cyclotron.run.count/failures %)))))
-
-  (pprint (map #(select-keys % [:cyclotron.run.count/specs
-                                :cyclotron.run/pipeline
-                                :cyclotron.run/date
-                                :cyclotron.run/job])
-               flawless)))
-
-
-
-
-
-
+    #_(cache/cache init)
+    )
 
 
 (require '[cyclotron.run :as run])
+(require '[cyclotron.utils :refer [str->int str->float]])
 
-(first run/runs)
+(pprint (->> run/runs
+             (filter run/successful?)
+             (sort-by :cyclotron.run/pipeline)
+             reverse
+             (filter #(> (:cyclotron.run.count/specs %) 200))
+             (take 1)))
 
-(def sorted (sort-by :cyclotron.run/date run/runs))
+;; One nice run, 111 specs passed: https://gitlab.logicgate.com/platform/logicgate/pipelines/14454
 
-
-(->> run/all-runs
-     ;; (remove (comp nil? :cyclotron.run/date))
-     (sort-by :cyclotron.run/date)
-     reverse
-     first)
-
-
-
+;; One nice run, nodes suite, 202 specs passed: https://gitlab.logicgate.com/platform/logicgate/pipelines/14898
 
 
+(s/def ::testsuite-xml
+  (fn [xml]
+    (every? (fn [tag] (= tag :testsuite)) (map :tag (:content xml)))))
+
+(def ffilter (comp first filter))
+
+(defn pipeline [runs id]
+  (ffilter #(= (str id) (:cyclotron.run/pipeline %) ) runs))
+
+(require '[java-time.core :as time])
+
+(require '[java-time.local :refer [local-date-time]])
+
+(require '[clojure.set :as set])
+
+(defn parse-suite-attrs [attrs]
+  (-> attrs
+      (update :errors str->int)
+      (update :disabled str->int)
+      (update :tests str->int)
+      (update :time str->float)
+      (dissoc :hostname)
+      (update :skipped str->int)
+      (update :timestamp local-date-time)
+      (update :failures str->int)
+      (set/rename-keys {:errors     :cyclotron.suite.count/errors
+                        :disabled   :cyclotron.suite.count/disabled
+                        :tests      :cyclotron.suite.count/tests
+                        :name       :cyclotron.suite/name
+                        :time       :cyclotron.suite/elapsed-time
+                        :skipped    :cyclotron.suite.count/skipped
+                        :timestamp  :cyclotron.suite/timestamp
+                        :failures   :cyclotron.suite.count/failures})))
+
+(defn case-groups [testsuites-xml]
+  (->> testsuites-xml
+       :content
+       (map :content)
+       (remove empty?)))
+
+(defn describe-case [case-xml]
+  {:cyclotron.case/precondition (get-in case-xml [:attrs :classname])
+   :cyclotron.case/expectation (get-in case-xml [:attrs :name])})
+
+(defn describe-suite [testsuite-xml]
+ (-> testsuite-xml
+     (dissoc :tag)
+     (update :attrs parse-suite-attrs)
+     (update :content #(map describe-case %))
+     (set/rename-keys {:content :cyclotron.suite/cases
+                       :attrs :cyclotron.suite/attributes})))
+
+(defn suites [run]
+  (map describe-suite (get-in run [:cyclotron.run/data :content])))
+
+(defn cases [run]
+  (let [suites (suites run)]
+    (mapcat :cyclotron.suite/cases suites)))
 
 
+(defn preconditioned-expectations [g]
+  {:cyclotron.case/precondition (:cyclotron.case/precondition (first g))
+   :cyclotron.case/expectations (map :cyclotron.case/expectation g)})
+
+(defn expectations [run]
+  (->> run
+       cases
+       (partition-by :cyclotron.case/precondition)
+       (map preconditioned-expectations)))
+
+(pprint (let [success-id "14453"
+              success-run (pipeline run/runs success-id)
+              run success-run]
+          (expectations run)))
+
+'(#:cyclotron.case{:precondition "Process:.a new process.with a new workflow,.the workflow nodes",
+                   :expectation "exist by default"}
+  #:cyclotron.case{:precondition "Process:.a new process.with a new workflow,.the workflow nodes",
+                   :expectation "lead to node pages"}
+  #:cyclotron.case{:precondition "Process:.a new process.with a new workflow,.the workflow nodes",
+                   :expectation "can open the editor for a node"})
+
+(pprint (let [e2e-successful-id "14454"
+              nodes-successful-id "14898"
+              run (pipeline run/runs e2e-successful-id)]
+          (expectations run)))
 
 
-(comment
+(comment "so if I understand this right, the xml data is a :testsuites, and it has some
+statistics and :content. The :content is a collection of :testsuite items. THOSE have
+attrs. And their content, if any, are these case groups. ")
 
-  (require '[cyclotron.run :as run]
-           '[oz.core :as oz])
-
-  (oz/start-plot-server!)
-
-  (create-ns 'cyclotron.run.count)
-
-  (alias 'stats 'cyclotron.run.count)
-
-  (alias 'run 'cyclotron.run)
-
-  (defn successes [meas]
-    (max 0 (- (::stats/specs meas)
-              (+ (::stats/errors meas)
-                 (::stats/failures meas)
-                 (::stats/disabled meas)))))
-
-  (defn measurements [run]
-    (let [meas (run/measure run)]
-      (-> (assoc meas ::stats/successes (successes meas))
-          (select-keys [::run/date
-                        ::run/pipeline
-                        ::stats/specs
-                        ::stats/errors
-                        ::stats/disabled
-                        ::stats/failures
-                        ::stats/successes
-                        ::run/elapsed-time]))))
-
-  (defn observe-key [k run]
-    {:pipeline (::run/pipeline run)
-     :count (get run k)
-     :result k})
-
-  (defn observations [runs]
-    (for [r (map measurements runs)
-          k [:cyclotron.run.count/failures
-             :cyclotron.run.count/successes
-             :cyclotron.run.count/errors
-             :cyclotron.run.count/disabled]]
-      (observe-key k r)))
-
-  (def disabled-gray "#707070")
-  (def error-orange "#fc9403")
-  (def failure-red "#db3b21")
-  (def success-green "#1aaa55")
-
-  (def fremove (comp first remove))
-
-
-  (defn stacked-bar [runs]
-    (let [values (observations runs)]
-      {:title (or (first (->> runs
-                              (map ::run/date)
-                              (remove nil?))) nil)
-       :data {:values values}
-       :mark "bar"
-       :encoding {:x {:field "pipeline"
-                      :type "ordinal"}
-                  :y {:aggregate "sum"
-                      :field "count"
-                      :type "quantitative"}
-                  :color {:field "result"
-                          :type "nominal"
-                          :scale {:domain ["disabled" "errors" "failures" "successes"]
-                                  :range [disabled-gray error-orange failure-red success-green]}}}}))
-
-  (oz/v! (stacked-bar (take 6 (remove #(nil? ( ::run/date %) ) run/runs))))
-
-  ;; (def partitioned-runs (partition 5 run/runs))
-
-  (def partitioned-runs
-    (->> run/runs
-         (remove #(nil? (::run/date %)))
-         (partition-by ::run/date)))
-
-  (set! *print-length* 10)
-
-  (defn row-of-multiples [row]
-    [:div {:style {:display "flex" :flex-direction "row"}}
-     (map (fn [part]
-            [:vega-lite (stacked-bar (nth partitioned-runs part))]) (range (* row 4) (* (+ 1 row ) 4)))])
-
-  (oz/view! [:div
-             [:h1 "Daily Pipelines"]
-             (row-of-multiples 0)
-             (row-of-multiples 1)
-             (row-of-multiples 2)]
-            [:h3 "History"]
-            [:vega-lite (dissoc (stacked-bar (take 50 run/runs)) :title)])
-  )
