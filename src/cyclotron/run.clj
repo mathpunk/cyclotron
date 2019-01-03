@@ -81,6 +81,14 @@
 
 ;; Other helpful things
 ;; =================================
+(def ffilter (comp first filter))
+
+(defn get-pipeline [id]
+  (ffilter #(= (str id) (:cyclotron.run/pipeline %) ) runs))
+
 (defn successful? [run]
   (= 0 (:cyclotron.run.count/failures run)))
+
+(defn failing? [run]
+  (not (successful? run)))
 

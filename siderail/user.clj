@@ -1,6 +1,6 @@
 (ns user)
 
-(do "Setup"
+(do "Preamble"
 
     (require '[clojure.spec.alpha :as s]
              '[clojure.spec.test.alpha :as t]
@@ -12,116 +12,74 @@
 
     (set! *print-length* 10)
 
-    (set! *print-level* 4)
+    (set! *print-level* 6)
 
-    #_(cache/cache init)
+    #_(do
+      (require '[cyclotron.cache :as cache])
+      (cache/init))
+
     )
 
-
-(require '[cyclotron.run :as run])
-(require '[cyclotron.utils :refer [str->int str->float]])
-
-(pprint (->> run/runs
-             (filter run/successful?)
-             (sort-by :cyclotron.run/pipeline)
-             reverse
-             (filter #(> (:cyclotron.run.count/specs %) 200))
-             (take 1)))
-
-;; One nice run, 111 specs passed: https://gitlab.logicgate.com/platform/logicgate/pipelines/14454
-
-;; One nice run, nodes suite, 202 specs passed: https://gitlab.logicgate.com/platform/logicgate/pipelines/14898
+(do "Require all the things!"
+  (require '[cyclotron.run :as run])
+  (require '[cyclotron.suite :as suite])
+  (require '[cyclotron.failure :as failure])
+  (require '[cyclotron.utils :refer [str->int str->float]]))
 
 
-(s/def ::testsuite-xml
-  (fn [xml]
-    (every? (fn [tag] (= tag :testsuite)) (map :tag (:content xml)))))
+(do "Exploring failures"
 
-(def ffilter (comp first filter))
+    (pprint (suite/expectations (first run/runs)))
 
-(defn pipeline [runs id]
-  (ffilter #(= (str id) (:cyclotron.run/pipeline %) ) runs))
+    (pprint (first (map #(dissoc % :cyclotron.failure/stacktrace) (failure/failures (first run/runs)))))
 
-(require '[java-time.core :as time])
+    ;; Ok. The first run is.... very bad. But it's not as bad as it says! Right?
 
-(require '[java-time.local :refer [local-date-time]])
+    (pprint (dissoc (first run/runs) :cyclotron.run/data))
 
-(require '[clojure.set :as set])
+    (pprint (first (map #(dissoc % :cyclotron.failure/stacktrace) (failure/failures (first run/runs)))))
 
-(defn parse-suite-attrs [attrs]
-  (-> attrs
-      (update :errors str->int)
-      (update :disabled str->int)
-      (update :tests str->int)
-      (update :time str->float)
-      (dissoc :hostname)
-      (update :skipped str->int)
-      (update :timestamp local-date-time)
-      (update :failures str->int)
-      (set/rename-keys {:errors     :cyclotron.suite.count/errors
-                        :disabled   :cyclotron.suite.count/disabled
-                        :tests      :cyclotron.suite.count/tests
-                        :name       :cyclotron.suite/name
-                        :time       :cyclotron.suite/elapsed-time
-                        :skipped    :cyclotron.suite.count/skipped
-                        :timestamp  :cyclotron.suite/timestamp
-                        :failures   :cyclotron.suite.count/failures})))
+    ;; Succeeds, 111 specs: https://gitlab.logicgate.com/platform/logicgate/pipelines/14454
+    ;; Succeeds, nodes suite, 202 specs: https://gitlab.logicgate.com/platform/logicgate/pipelines/14898
 
-(defn case-groups [testsuites-xml]
-  (->> testsuites-xml
-       :content
-       (map :content)
-       (remove empty?)))
+    (def root "/home/man/logicgate/dev/logicgate/platform/client/")
 
-(defn describe-case [case-xml]
-  {:cyclotron.case/precondition (get-in case-xml [:attrs :classname])
-   :cyclotron.case/expectation (get-in case-xml [:attrs :name])})
+    (alias 'fail 'cyclotron.failure)
 
-(defn describe-suite [testsuite-xml]
- (-> testsuite-xml
-     (dissoc :tag)
-     (update :attrs parse-suite-attrs)
-     (update :content #(map describe-case %))
-     (set/rename-keys {:content :cyclotron.suite/cases
-                       :attrs :cyclotron.suite/attributes})))
+    ::fail/specs
 
-(defn suites [run]
-  (map describe-suite (get-in run [:cyclotron.run/data :content])))
+    (def example-failure '#:cyclotron.failure{:message
+                                              "TimeoutError: Wait timed out after 30000ms",
+                                              :specs
+                                              (#:cyclotron.failure{:file
+                                                                   "e2e/specs/app/build/processes/node/build-node.spec.ts",
+                                                                   :line "22",
+                                                                   :char "3)"}
+                                                                  #:cyclotron.failure{:file
+                                                                                      "e2e/specs/app/build/processes/node/build-node.spec.ts",
+                                                                                      :line "12",
+                                                                                      :char "1)"}),
+                                              :pages
+                                              (#:cyclotron.failure{:file
+                                                                   "e2e/pages/common/panel.ts",
+                                                                   :line "26",
+                                                                   :char "20)"}
+                                                                  #:cyclotron.failure{:file
+                                                                                      "e2e/pages/common/page.ts",
+                                                                                      :line "34",
+                                                                                      :char "24"})})
 
-(defn cases [run]
-  (let [suites (suites run)]
-    (mapcat :cyclotron.suite/cases suites)))
+    (string/split-lines (slurp (str root (::fail/file (first (example-failure ::fail/specs))))))
+
+    (defn spec-coordinates [failure]
+      (->> (::fail/specs failure)
+           (map #(dissoc % ::fail/char))
+           (map #(update % ::fail/line str->int))))
 
 
-(defn preconditioned-expectations [g]
-  {:cyclotron.case/precondition (:cyclotron.case/precondition (first g))
-   :cyclotron.case/expectations (map :cyclotron.case/expectation g)})
 
-(defn expectations [run]
-  (->> run
-       cases
-       (partition-by :cyclotron.case/precondition)
-       (map preconditioned-expectations)))
-
-(pprint (let [success-id "14453"
-              success-run (pipeline run/runs success-id)
-              run success-run]
-          (expectations run)))
-
-'(#:cyclotron.case{:precondition "Process:.a new process.with a new workflow,.the workflow nodes",
-                   :expectation "exist by default"}
-  #:cyclotron.case{:precondition "Process:.a new process.with a new workflow,.the workflow nodes",
-                   :expectation "lead to node pages"}
-  #:cyclotron.case{:precondition "Process:.a new process.with a new workflow,.the workflow nodes",
-                   :expectation "can open the editor for a node"})
-
-(pprint (let [e2e-successful-id "14454"
-              nodes-successful-id "14898"
-              run (pipeline run/runs e2e-successful-id)]
-          (expectations run)))
-
-
-(comment "so if I understand this right, the xml data is a :testsuites, and it has some
-statistics and :content. The :content is a collection of :testsuite items. THOSE have
-attrs. And their content, if any, are these case groups. ")
-
+    (let [coords (first (spec-coordinates example-failure))
+          content (slurp (str root (::fail/file coords)))
+          line (::fail/line coords)]
+      line
+      ))
