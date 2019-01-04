@@ -13,7 +13,6 @@
                  [clj-jgit "0.8.10"]
                  [org.clojure/data.zip "0.1.2"]
                  [com.cognitect/transcriptor "0.1.5"]
-
                  ]
   :main ^:skip-aot cyclotron.core
   :target-path "target/%s"
