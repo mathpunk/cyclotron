@@ -33,27 +33,6 @@
 
 (set-print {:level nil :length 10})
 
-(do 
-  (alias 'case 'cyclotron.case)
-  (alias 'run 'cyclotron.run)
-
-  (defn success-rate [{:keys [cyclotron.case/passed cyclotron.case/failed]}]
-    (let [total (+ passed failed)]
-      (float (/ passed total))))
-
-  (defn summarize [run]
-    (let [basic-stats (case/breakdown-count run)
-          derived-stats (assoc basic-stats :cyclotron.run.stats/success-ratio (success-rate basic-stats))]
-      (-> run
-          (dissoc ::run/data ::run/revision)
-          (merge derived-stats))))
-
-  (->> run/runs
-       (map summarize)
-       (remove #(zero? (::case/passed %)))
-       (take 10)
-       print-table))
-
 
 
 (comment "Scrap helpers"

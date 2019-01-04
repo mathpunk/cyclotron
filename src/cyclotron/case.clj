@@ -59,7 +59,7 @@
         (update ::skipped #(map create-case %))
         (update ::failed #(map create-failure %)))))
 
-(defn breakdown-count [run]
+(defn score [run]
   (-> (breakdown run)
       (update ::passed count)
       (update ::skipped count)
@@ -71,4 +71,4 @@
 
     (breakdown mock-run)
 
-    (breakdown-count mock-run))
+    (score mock-run))

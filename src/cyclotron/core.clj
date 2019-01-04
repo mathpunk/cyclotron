@@ -2,14 +2,18 @@
   (:gen-class)
   (:require [cyclotron.cache :as cache]
             [cyclotron.run :as run]
-            [cyclotron.visualization.components :refer [color]]
-            [oz.core :as oz]))
+            #_[cyclotron.visualization.components :refer [color]]
+            [cyclotron.report :as report]
+            #_[oz.core :as oz]))
 
 
 (defn -main
   "Don't do much"
   [& args]
-  (println "Heeeeeeyyyyyy"))
+  (println "\nSUCCESSES")
+  (report/ascii-summary-successes 10)
+  (println "\nRECENT")
+  (report/ascii-summary-recent 10))
 
 
 
