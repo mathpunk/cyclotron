@@ -51,7 +51,10 @@
 
 (defn- log-xml-malformation [error meta]
   ;; TODO: This would be interesting https://github.com/clojure/tools.logging
-  (println (str error " in pipeline " (::pipeline meta) " on " (::date meta))))
+  ;; NOTE: This was useful for helping me understand that my xml failures are pretty
+  ;; deep in our run history, but, it's kind of obnoxious. What's the "real" logging
+  ;; solution?
+  #_(println (str error " in pipeline " (::pipeline meta) " on " (::date meta))))
 
 (defn create-run [file]
   (let [path (.getPath file)

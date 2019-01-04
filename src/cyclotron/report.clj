@@ -14,7 +14,10 @@
   (+ passed failed))
 
 (defn success-rate [{:keys [cyclotron.case/passed cyclotron.case/failed] :as counts}]
-  (float (/ passed (tried counts))))
+  (let [total (tried counts)]
+    (if (zero? total)
+      (float 0)
+      (float (/ passed (tried counts ))))))
 
 
 (defn summary [run]
