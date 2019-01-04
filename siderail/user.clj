@@ -29,20 +29,3 @@
 (do "Require your code"
     (require '[cyclotron.run :as run])
     (require '[cyclotron.case :as case]))
-
-
-(set-print {:level nil :length 10})
-
-
-
-(comment "Scrap helpers"
-  (def ffilter (comp first filter))
-
-  (defn get-pipeline [id]
-    (ffilter #(= (str id) (:cyclotron.run/pipeline %) ) runs))
-
-  (defn successful? [run]
-    (= 0 (:cyclotron.run.count/failures run)))
-
-  (defn failing? [run]
-    (not (successful? run))))
