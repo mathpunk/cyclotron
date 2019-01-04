@@ -1,25 +1,30 @@
 (ns cyclotron.run
+  (:import org.xml.sax.SAXParseException)
   (:require [clojure.spec.alpha :as s]
             [clojure.string :as string]
             [cyclotron.cache :as cache]
-            [clojure.data.xml :as xml]
+            [clojure.xml :as xml]
             [cyclotron.utils :refer [str->int str->float]]
             [clojure.set :as set]))
 
 
 ;; Metadata about the test run is stored in the path
 ;; ===================================================
-(defn date [path]
+(defn date
+  [path]
   (second (re-find #"reports/(\d\d\d\d/\d\d/\d\d)/" path)))
 
-(defn job [path]
+(defn job
+  "A name found in .gitlab-ci"
+  [path]
   (second (re-find #"\d\d\d\d/\d\d/\d\d/([\w-]+)" path)))
 
-(defn pipeline [path]
+(defn pipeline
+  [path]
   (second (re-find #"pipeline-(\d+)" path)))
 
 (defn suites
-  "If known, otherwise nil"
+  "If known. Otherwise nil"
   [path]
   (if-let [suite-string (re-find #"suites-(\w+,?)+" path)]
     (-> suite-string
@@ -39,56 +44,28 @@
    ::suites (suites path)
    ::job (job path)})
 
+(defn run-data
+  "Parses a file into an xml-seq"
+  [file]
+  (xml-seq (xml/parse file)))
 
+(defn- log-xml-malformation [error meta]
+  ;; TODO: This would be interesting https://github.com/clojure/tools.logging
+  (println (str error " in pipeline " (::pipeline meta) " on " (::date meta))))
 
-;; The run data with some stats parsed
-;; =========================================
-(defn run-data [file]
-  (xml/parse-str (slurp file)))
-
-(defn run-stats [file]
-  (let [xml (run-data file)]
-    (-> (:attrs xml)
-        (update :disabled str->int)
-        (update :errors str->int)
-        (update :failures str->int)
-        (update :tests str->int)
-        (update :time str->float)
-        (set/rename-keys {:disabled :cyclotron.run.count/disabled
-                          :errors   :cyclotron.run.count/errors
-                          :failures :cyclotron.run.count/failures
-                          :tests    :cyclotron.run.count/specs
-                          :time     :cyclotron.run/elapsed-time}))))
-
-
-;; The finished run map
-;; ======================================
 (defn create-run [file]
-  (let [path (.getPath file)]
-    (merge (run-meta path)
-           {::data (run-data file)}
-           (run-stats file))))
+  (let [path (.getPath file)
+        meta (run-meta path)
+        data (try (run-data file)
+                  (catch SAXParseException e
+                    (let [error (if (empty? (slurp file))
+                                  :cyclotron.run.error/empty-junit-report
+                                  :cyclotron.run.error/unknown-xml-error)]
+                      (log-xml-malformation error meta))))]
+    (merge meta {::data data})))
 
-
-;; The collection of test runs to date
-;; =========================================
 (def runs
   (->> cache/cache
        (map create-run)
        (sort-by :cyclotron.run/pipeline)
        reverse))
-
-
-;; Other helpful things
-;; =================================
-(def ffilter (comp first filter))
-
-(defn get-pipeline [id]
-  (ffilter #(= (str id) (:cyclotron.run/pipeline %) ) runs))
-
-(defn successful? [run]
-  (= 0 (:cyclotron.run.count/failures run)))
-
-(defn failing? [run]
-  (not (successful? run)))
-
