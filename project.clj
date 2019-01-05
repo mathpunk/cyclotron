@@ -4,6 +4,7 @@
   :license {:name "its ours u can't have it"
             :url ""}
   :dependencies [[org.clojure/clojure "1.10.0-RC3"]
+                 [org.clojure/tools.cli "0.4.1"]
                  [metasoarous/oz "1.3.1"]
                  [clojure.java-time "0.3.2"]
                  [org.clojure/data.xml "0.0.8"]

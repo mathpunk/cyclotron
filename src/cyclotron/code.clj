@@ -7,6 +7,7 @@
             [clj-jgit.internal :as git-internal]
             [java-time :as time]))
 
+
 ;; Datafying a repository
 ;; ================================================
 ;; TODO: Clone?
@@ -22,7 +23,7 @@
 
 ;; Commits
 ;; =================================
-(defn get-rev
+(defn- get-rev
   "A RevCommit is a Java object representing a commit"
   [sha]
   (find-rev-commit repo rev-walk sha))
@@ -31,7 +32,7 @@
   "A reverse-chron sequence of RevCommits. Starts from 'where we are'"
   (partial git/git-log repo))
 
-(def head (first (log)))
+(defn head [] (first (log)))
 
 (s/def ::rev-commit #(= org.eclipse.jgit.revwalk.RevCommit (type %)))
 
@@ -56,7 +57,7 @@
   [x]
   (.getName x ))
 
-(defn ->commit [revcommit]
+(defn create-commit [revcommit]
   (let [stringified (.toString revcommit)
         author (.getAuthorIdent revcommit)
         committer (.getCommitterIdent revcommit)
@@ -75,10 +76,10 @@
                  (first (.getParent revcommit 0)))}))
 
 (defn parents [commit]
-  (map ->commit (::parents commit)))
+  (map create-commit (::parents commit)))
 
 
-;; Branches
+;; Branches. Can change where HEAD is! Be careful!!
 ;; =================
 (def checkout (partial git/git-checkout repo))
 
@@ -92,15 +93,13 @@
     (checkout title)))
 
 
-
 ;; Multiple commits: chains, transitions, differences...
 ;; ========================================================
-
 (defn scout-to
   "A sequence of commits from HEAD to the given sha. (Why 'scout'? Because we don't actually
   change HEAD, we just get data.)"
   [sha]
-  (loop [head (->commit head)
+  (loop [head (create-commit head)
          acc []]
     (if (= sha (hash head))
       (conj acc head)
@@ -114,9 +113,10 @@
 
 (defn changed-files
   "Given a pair of shas, returns a sequence of the filenames that were changed between the two. (This fn drops the key that tells us WHAT happened, because it's almost always an :edit. /shrug)"
-  [sha1 sha2] 
-  (let [revs (map get-rev [sha1 sha2])]
-    (apply (partial changed-files-between-commits repo) revs)))
+  ([sha1 sha2] 
+   (let [revs (map get-rev [sha1 sha2])]
+     (apply (partial changed-files-between-commits repo) revs)))
+  ([sha] (changed-files (hash (head)) sha)))
 
 (defn changed-files-immediately-after
   [sha1]

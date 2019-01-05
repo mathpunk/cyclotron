@@ -20,7 +20,7 @@
       (map #(ns-unmap 'user %) (keys (ns-publics 'user))))
 
     "Possibly load the cache (in it's entirety, sigh)"
-    #_(do
+    (do
         (require '[cyclotron.cache :as cache])
         (cache/init))
 
@@ -28,4 +28,11 @@
 
 (do "Require your code"
     (require '[cyclotron.run :as run])
+    (require '[cyclotron.report :as report])
     (require '[cyclotron.case :as case]))
+
+(require '[cyclotron.code :as code])
+
+
+(report/ascii-summary-recent 10)
+
