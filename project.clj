@@ -1,7 +1,7 @@
 (defproject cyclotron "0.6.1-SNAPSHOT"
-  :description "LogicGate E2E/CI reports"
+  :description "LG E2E/CI reporting"
   :url ""
-  :license {:name "its ours u can't have it"
+  :license {:name ""
             :url ""}
   :dependencies [[org.clojure/clojure "1.10.0-RC5"]
                  [org.clojure/tools.cli "0.4.1"]

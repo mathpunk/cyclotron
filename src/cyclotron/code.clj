@@ -112,6 +112,10 @@
 
 (defn changed-files
   "Given a pair of shas, returns a sequence of the filenames that were changed between the two."
+  ([sha1 sha2]
+   (let [revs (map get-rev [sha1 sha2])]
+     (map first (apply (partial changed-files-between-commits repo) revs))))
+  ([sha] (changed-files (hash (head)) sha)))
 
 (defn changed-files-immediately-after
   [sha1]
