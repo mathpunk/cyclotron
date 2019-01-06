@@ -8,22 +8,22 @@
 
 (alias 'run 'cyclotron.run)
 
-(alias 'stats (create-ns 'cyclotron.run.stats))
-
-(defn tried [{:keys [cyclotron.case/passed cyclotron.case/failed]}]
+(defn attempted [{:keys [cyclotron.case/passed cyclotron.case/failed]}]
   (+ passed failed))
 
+(alias 'stats (create-ns 'cyclotron.run.stats))
+
 (defn success-rate [{:keys [cyclotron.case/passed cyclotron.case/failed] :as counts}]
-  (let [total (tried counts)]
+  (let [total (attempted counts)]
     (if (zero? total)
       (float 0)
-      (float (/ passed (tried counts ))))))
+      (float (/ passed (attempted counts ))))))
 
 
 (defn summary [run]
-  (let [score (case/score run)
+  (let [score (case/score (:cyclotron.run/report run))
         stats (merge score {::stats/success-ratio (success-rate score)
-                            ::stats/tried (tried score)})]
+                            ::stats/attempted (attempted score)})]
     (-> run
         (merge stats)
         (update ::run/suites #(if (nil? %) "<unavailable>" (string/join ", " %)))
@@ -35,7 +35,7 @@
                           ::case/failed "Failed"
                           ::case/skipped "Skipped"
                           ::run/revision "Revision SHA"
-                          ::stats/tried "Total"
+                          ::stats/attempted "Total"
                           ::stats/success-ratio "%"}))))
 
 (defn ascii-summary-successes [n]

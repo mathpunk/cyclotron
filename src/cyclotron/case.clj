@@ -76,8 +76,8 @@
   (s/fdef breakdown
     :args (s/cat :xml-seq seq?)))
 
-(defn score [run]
-  (-> (breakdown run)
+(defn score [report]
+  (-> (breakdown report)
       (update ::passed count)
       (update ::skipped count)
       (update ::failed count)))
