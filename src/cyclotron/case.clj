@@ -29,8 +29,8 @@
                       ::failed ::failing
                       ::skipped ::skipped))
 
-(defn cases
-  [{:keys [cyclotron.run/report]}]
+(defn case-nodes
+  [report]
   (filter (partial s/valid? ::testcase) report))
 
 (defn precondition [case-node]
@@ -52,12 +52,29 @@
          {:cyclotron.failure/events (map failure/create-event (:content failure-node))}))
 
 (defn breakdown
-  [run]
-  (let [classified (group-by #(first (s/conform ::result %)) (cases run))]
+  [report]
+  (let [classified (group-by #(first (s/conform ::result %)) (case-nodes report))]
     (-> classified
         (update ::passed #(map create-case %))
         (update ::skipped #(map create-case %))
         (update ::failed #(map create-failure %)))))
+
+(comment
+
+  (require '[cyclotron.utils :refer [mock-run]])
+
+  (:cyclotron.run/report mock-run)
+
+  (keys mock-run)
+
+  (cases mock-run)
+
+  (breakdown mock-run)
+
+  (score mock-run)
+
+  (s/fdef breakdown
+    :args (s/cat :xml-seq seq?)))
 
 (defn score [run]
   (-> (breakdown run)
@@ -65,10 +82,3 @@
       (update ::skipped count)
       (update ::failed count)))
 
-(do "Sample output"
-
-    (require '[cyclotron.utils :refer [mock-run]])
-
-    (breakdown mock-run)
-
-    (score mock-run))

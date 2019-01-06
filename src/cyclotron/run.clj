@@ -3,6 +3,7 @@
   (:require [clojure.spec.alpha :as s]
             [clojure.string :as string]
             [cyclotron.cache :as cache]
+            [cyclotron.case :as case]
             [clojure.xml :as xml]
             [cyclotron.utils :refer [str->int str->float]]
             [clojure.set :as set]))
@@ -37,16 +38,12 @@
 (defn revision [path]
   (second (re-find #"revision-(\w+)" path)))
 
-(do
-
-  (defn run-meta [path]
-    {::date (date path)
-     ::pipeline (pipeline path)
-     ::revision (revision path)
-     ::suites (suites path)
-     ::job (job path)}))
-
-
+(defn run-meta [path]
+  {::date (date path)
+   ::pipeline (pipeline path)
+   ::revision (revision path)
+   ::suites (suites path)
+   ::job (job path)})
 
 (defn run-data
   "Parses a file into an xml-seq"
@@ -69,7 +66,8 @@
                                     :cyclotron.run.error/empty-junit-report
                                     :cyclotron.run.error/unknown-xml-error)]
                         (log-xml-malformation error meta))))]
-    (merge meta {::report report})))
+    (merge meta {::report report
+                 ::cases (case/breakdown report)})))
 
 (def runs
   (->> cache/cache

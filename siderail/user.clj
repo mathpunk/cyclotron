@@ -1,13 +1,13 @@
-(ns user)
+(ns user
+  (:require [clojure.spec.alpha :as s]
+            [clojure.spec.test.alpha :as test]
+            [clojure.spec.gen.alpha :as gen]
+            [clojure.string :as string]
+            [clojure.java.io :as io]
+            [clojure.pprint :refer [print-table pprint]]
+            [cognitect.transcriptor :refer [check!]]))
 
-(do "Require your tools"
-    (require '[clojure.spec.alpha :as s]
-             '[clojure.spec.test.alpha :as t]
-             '[clojure.spec.gen.alpha :as g]
-             '[clojure.string :as string]
-             '[clojure.java.io :as io]
-             '[clojure.pprint :refer [print-table pprint]]
-             '[cognitect.transcriptor :refer [check!]])
+(do "Tools"
 
     (defn set-print
       [{:keys [level length]}]
@@ -19,19 +19,22 @@
       []
       (map #(ns-unmap 'user %) (keys (ns-publics 'user))))
 
-    "Possibly load the cache (in it's entirety, sigh)"
-    ;; (do
-    ;;     (require '[cyclotron.cache :as cache])
-    ;;     (cache/init))
 
     (set-print {:length 8 :level 3}))
+
+(comment
+
+  "Possibly load the cache (in it's entirety, sigh)"
+  (do
+    (require '[cyclotron.cache :as cache])
+    (cache/init)))
 
 (do "Require your code"
     (require '[cyclotron.run :as run])
     (require '[cyclotron.report :as report])
-    (require '[cyclotron.case :as case])
-    (require '[cyclotron.code :as code]))
+    (require '[cyclotron.case :as case]))
 
+(require '[cyclotron.code :as code])
 
 (do "Don't break reports"
 
@@ -39,4 +42,11 @@
 
     (report/ascii-summary-successes 10))
 
+
+(do
+
+  (require '[cyclotron.utils :refer [mock-run]])
+
+
+  )
 
