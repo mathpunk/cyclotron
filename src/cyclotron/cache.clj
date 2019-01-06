@@ -2,27 +2,25 @@
   (:refer-clojure :exclude [load update])
   (:require [clojure.data.xml :as xml]
             [clojure.java.io :as io]
+            [aero.core :refer [read-config]]
             [clojure.java.shell :as sh]
             [clojure.string :as string]))
 
 (def cache-location (io/as-file (io/resource "reports")))
 
-
 (defn load
   ([date]
-   (let [bucket "s3://gitlab-logicgate-artifacts/"
+   (let [{{:keys [bucket profile]} :aws} (read-config "config.edn")
          target (.getPath cache-location )]
-     (apply sh/sh ["aws" "--profile" "lg" "s3" "cp" "--recursive" (str bucket date) target])))
+     (apply sh/sh ["aws" "--profile" profile "s3" "cp" "--recursive" (str bucket date) target])))
   ([]
    (load nil)))
-
 
 (defn init []
   (let [results (load)]
     (if (empty? (:err results))
       ::ok
       {::error (:err results)})))
-
 
 (def cache
   (->> cache-location

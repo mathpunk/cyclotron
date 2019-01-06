@@ -1,6 +1,7 @@
 (ns cyclotron.code
   (:refer-clojure :exclude [hash parents])
   (:require [clj-jgit.porcelain :as git]
+            [aero.core :refer [read-config]]
             [clojure.spec.alpha :as s]
             [clojure.string :as string]
             [clj-jgit.querying :refer [find-rev-commit changed-files-between-commits]]
@@ -12,11 +13,9 @@
 ;; ================================================
 ;; TODO: Clone?
 
-(def local-repo ;; TODO: Should be from a config option
-  (let [base "/home/man/logicgate/dev/logicgate"]
-    (git/load-repo base)))
-
-(def repo local-repo)
+(def repo
+  (let [{:keys [repo-path]} (read-config "config.edn")]
+    (git/load-repo repo-path)))
 
 (def rev-walk (git-internal/new-rev-walk repo))
 
