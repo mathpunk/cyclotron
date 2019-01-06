@@ -105,7 +105,7 @@
 
     ;; Ok. The first run is.... very bad. But it's not as bad as it says! Right?
 
-    (pprint (dissoc (first run/runs) :cyclotron.run/data))
+    (pprint (dissoc (first run/runs) :cyclotron.run/report))
 
     (pprint (first (map #(dissoc % :cyclotron.failure/stacktrace) (failure/failures (first run/runs)))))
 

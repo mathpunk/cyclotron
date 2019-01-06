@@ -30,8 +30,8 @@
                       ::skipped ::skipped))
 
 (defn cases
-  [{:keys [cyclotron.run/data]}]
-  (filter (partial s/valid? ::testcase) data))
+  [{:keys [cyclotron.run/report]}]
+  (filter (partial s/valid? ::testcase) report))
 
 (defn precondition [case-node]
   (get-in case-node [:attrs :classname]))

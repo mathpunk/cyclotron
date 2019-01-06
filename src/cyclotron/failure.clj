@@ -18,14 +18,16 @@
       (throw (Exception. (str ":cyclotron.failure.event content (stacktrace-data) does not conform to spec:"
                               (s/explain ::event-node-content stacktrace-data)))))))
 
-(alias 'point (create-ns 'cyclotron.failure.point))
+(alias 'point (create-ns 'cyclotron.code.point))
 
 (s/def ::spec-path (partial re-find #"e2e/specs"))
 
 (s/def ::page-path (partial re-find #"e2e/pages"))
 
-(s/def ::e2e-code (s/or ::point/pages ::page-path
-                        ::point/specs ::spec-path))
+(alias 'code (create-ns 'cyclotron.code))
+
+(s/def ::e2e-code (s/or ::code/page ::page-path
+                        ::code/spec ::spec-path))
 
 (defn parse-location
   "A 'location' is a point of failure, represented as a string with a usually-uninformative symbol about what failed (e.g., Suite.<anonymous>, Object.<anonymous>), the path (with the gitlab runner as root), and line and char number."
@@ -42,11 +44,9 @@
         locations-of-interest (->> locations
                                    (remove #(re-find #"node_modules" %))
                                    (filter #(re-find #"platform/client" %)))
-        points-of-failure (group-by (fn [loc] (first (s/conform ::e2e-code loc))) locations-of-interest)
-        module-data (-> points-of-failure
-                        (update ::point/pages #(map parse-location %))
-                        (update ::point/specs #(map parse-location %)))]
-    module-data))
+        points-of-failure (group-by (fn [loc] (first (s/conform ::e2e-code loc))) locations-of-interest)]
+    {::code/pages (map parse-location (::code/page points-of-failure))
+     ::code/specs (map parse-location (::code/spec points-of-failure))}))
 
 (defn create-event [event-node]
   (let [base-event {::event/message (get-in event-node [:attrs :message])
@@ -56,7 +56,7 @@
     (merge base-event
            {::event/error error
             ::event/stacktrace stacktrace
-            ::event/modules (modules stacktrace)})))
+            ::event/test-code-involved (modules stacktrace)})))
 
 (defn events [failure]
   (map create-event (:content failure)))

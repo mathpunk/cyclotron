@@ -37,12 +37,16 @@
 (defn revision [path]
   (second (re-find #"revision-(\w+)" path)))
 
-(defn run-meta [path]
-  {::date (date path)
-   ::pipeline (pipeline path)
-   ::revision (revision path)
-   ::suites (suites path)
-   ::job (job path)})
+(do
+
+  (defn run-meta [path]
+    {::date (date path)
+     ::pipeline (pipeline path)
+     ::revision (revision path)
+     ::suites (suites path)
+     ::job (job path)}))
+
+
 
 (defn run-data
   "Parses a file into an xml-seq"
@@ -59,13 +63,13 @@
 (defn create-run [file]
   (let [path (.getPath file)
         meta (run-meta path)
-        data (try (run-data file)
-                  (catch SAXParseException e
-                    (let [error (if (empty? (slurp file))
-                                  :cyclotron.run.error/empty-junit-report
-                                  :cyclotron.run.error/unknown-xml-error)]
-                      (log-xml-malformation error meta))))]
-    (merge meta {::data data})))
+        report (try (run-data file)
+                    (catch SAXParseException e
+                      (let [error (if (empty? (slurp file))
+                                    :cyclotron.run.error/empty-junit-report
+                                    :cyclotron.run.error/unknown-xml-error)]
+                        (log-xml-malformation error meta))))]
+    (merge meta {::report report})))
 
 (def runs
   (->> cache/cache

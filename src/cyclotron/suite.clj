@@ -41,7 +41,7 @@
                         :attrs :cyclotron.suite/attributes})))
 
 (defn suites [run]
-  (map describe-suite (get-in run [:cyclotron.run/data :content])))
+  (map describe-suite (get-in run [:cyclotron.run/report :content])))
 
 (defn cases [run]
   (let [suites (suites run)]

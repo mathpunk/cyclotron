@@ -10,4 +10,4 @@
 
 (def sample-report (io/file "/home/man/projects/developing/cyclotron/resources/reports/sample.xml"))
 
-(def mock-run {:cyclotron.run/data (xml-seq (xml/parse sample-report))})
+(def mock-run {:cyclotron.run/report (xml-seq (xml/parse sample-report))})
