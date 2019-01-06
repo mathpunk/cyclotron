@@ -28,9 +28,9 @@
        (map :content)
        (remove empty?)))
 
-(defn describe-case [case-xml]
-  {:cyclotron.case/precondition (get-in case-xml [:attrs :classname])
-   :cyclotron.case/expectation (get-in case-xml [:attrs :name])})
+;; (defn describe-case [case-xml]
+;;   {:cyclotron.case/precondition (get-in case-xml [:attrs :classname])
+;;    :cyclotron.case/expectation (get-in case-xml [:attrs :name])})
 
 (defn describe-suite [testsuite-xml]
   (-> testsuite-xml

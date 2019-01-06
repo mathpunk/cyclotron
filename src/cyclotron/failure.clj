@@ -16,9 +16,8 @@
       :string (string/split-lines (second conformed))
       :coll (string/split-lines (first (second conformed)))
       (throw (Exception. (str ":cyclotron.failure.event content (stacktrace-data) does not conform to spec:"
-                              (s/explain ::event-node-content stacktrace-data)))))))
-
-(alias 'point (create-ns 'cyclotron.code.point))
+                              (s/explain ::event-node-content stacktrace-data)
+                              "This violates an assumption but may not be an error."))))))
 
 (s/def ::spec-path (partial re-find #"e2e/specs"))
 
@@ -28,6 +27,8 @@
 
 (s/def ::e2e-code (s/or ::code/page ::page-path
                         ::code/spec ::spec-path))
+
+(alias 'point (create-ns 'cyclotron.code.point))
 
 (defn parse-location
   "A 'location' is a point of failure, represented as a string with a usually-uninformative symbol about what failed (e.g., Suite.<anonymous>, Object.<anonymous>), the path (with the gitlab runner as root), and line and char number."

@@ -1,4 +1,4 @@
-(defproject cyclotron "0.6.0-SNAPSHOT"
+(defproject cyclotron "0.6.1-SNAPSHOT"
   :description "LogicGate E2E/CI reports"
   :url ""
   :license {:name "its ours u can't have it"
