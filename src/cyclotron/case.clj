@@ -25,9 +25,9 @@
 (s/def ::skipped (s/and ::testcase
                         (fn [node] (uniform-content? node :skipped))))
 
-(s/def ::result (s/or ::passed ::passing
-                      ::failed ::failing
-                      ::skipped ::skipped))
+(s/def ::result (s/or :passed ::passing
+                      :failed ::failing
+                      :skipped ::skipped))
 
 (defn case-nodes
   [report]
@@ -55,9 +55,16 @@
   [report]
   (let [classified (group-by #(first (s/conform ::result %)) (case-nodes report))]
     (-> classified
-        (update ::passed #(map create-case %))
-        (update ::skipped #(map create-case %))
-        (update ::failed #(map create-failure %)))))
+        (update :passed #(map create-case %))
+        (update :skipped #(map create-case %))
+        (update :failed #(map create-failure %)))))
+
+(defn score [report]
+  (-> (breakdown report)
+      (update :passed count)
+      (update :skipped count)
+      (update :failed count)))
+
 
 (comment
 
@@ -71,14 +78,5 @@
 
   (breakdown mock-run)
 
-  (score mock-run)
-
-  (s/fdef breakdown
-    :args (s/cat :xml-seq seq?)))
-
-(defn score [report]
-  (-> (breakdown report)
-      (update ::passed count)
-      (update ::skipped count)
-      (update ::failed count)))
+  (score mock-run))
 

@@ -112,11 +112,7 @@
   (take 2 (reverse (scout-to sha))))
 
 (defn changed-files
-  "Given a pair of shas, returns a sequence of the filenames that were changed between the two. (This fn drops the key that tells us WHAT happened, because it's almost always an :edit. /shrug)"
-  ([sha1 sha2] 
-   (let [revs (map get-rev [sha1 sha2])]
-     (apply (partial changed-files-between-commits repo) revs)))
-  ([sha] (changed-files (hash (head)) sha)))
+  "Given a pair of shas, returns a sequence of the filenames that were changed between the two."
 
 (defn changed-files-immediately-after
   [sha1]

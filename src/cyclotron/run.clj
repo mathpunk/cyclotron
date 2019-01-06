@@ -50,12 +50,18 @@
   [file]
   (xml-seq (xml/parse file)))
 
+;; (s/fdef run-data
+;;   :args (s/cat :xml-seq seq?))
+
 (defn- log-xml-malformation [error meta]
   ;; TODO: This would be interesting https://github.com/clojure/tools.logging
   ;; NOTE: This was useful for helping me understand that my xml failures are pretty
   ;; deep in our run history, but, it's kind of obnoxious. What's the "real" logging
   ;; solution?
   #_(println (str error " in pipeline " (::pipeline meta) " on " (::date meta))))
+
+(alias 'count (create-ns 'cyclotron.cases.count))
+(alias 'stats (create-ns 'cyclotron.run.stats))
 
 (defn create-run [file]
   (let [path (.getPath file)
@@ -65,9 +71,22 @@
                       (let [error (if (empty? (slurp file))
                                     :cyclotron.run.error/empty-junit-report
                                     :cyclotron.run.error/unknown-xml-error)]
-                        (log-xml-malformation error meta))))]
+                        (log-xml-malformation error meta))))
+        cases (case/breakdown report)
+        passed (count (:passed cases))
+        failed (count (:failed cases))
+        skipped (count (:skipped cases))
+        attempted (+ passed failed)
+        success-ratio (if (zero? attempted)
+                        (float 0)
+                        (float (/ passed attempted)))]
     (merge meta {::report report
-                 ::cases (case/breakdown report)})))
+                 ::cases cases
+                 ::count/passed passed
+                 ::count/failed failed
+                 ::count/skipped skipped
+                 ::count/attempted attempted
+                 ::stats/success-ratio success-ratio})))
 
 (def runs
   (->> cache/cache
